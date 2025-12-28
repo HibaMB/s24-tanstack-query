@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function NewEventsSection() {
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["events"],
-    queryFn: fetchEvents,
+    queryKey: ["events", { max: 3 }],
+    queryFn: ({ signal, queryKey }) => fetchEvents({ signal, ...queryKey[1] }),
     staleTime: 5000, //default is 0
     //gcTime: 300000, //garbage collection time, default is 5 min (300000). / cached data is cleared after this amount of time
   });
