@@ -1,59 +1,70 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  redirect,
+  useNavigate,
+  useNavigation,
+  useParams,
+  useSubmit,
+} from "react-router-dom";
 
 import Modal from "../UI/Modal.jsx";
 import EventForm from "./EventForm.jsx";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { fetchEvent, queryClient, updateEvent } from "../../utils/http.js";
 import ErrorBlock from "../UI/ErrorBlock.jsx";
-import LoadingIndicator from "../UI/LoadingIndicator.jsx";
 
 export default function EditEvent() {
   const navigate = useNavigate();
+  const submit = useSubmit();
+  const { state } = useNavigation();
+
   const params = useParams();
   const id = params["id"];
 
   const {
     data: event,
-    isPending,
     isError,
     error,
   } = useQuery({
     queryKey: ["events", { id }],
     queryFn: ({ signal }) => fetchEvent({ id, signal }),
+    staleTime: 10000,
   });
 
-  const { mutate } = useMutation({
-    mutationFn: updateEvent,
-    onMutate: async (data) => {
-      const newEvent = data.event;
+  // const { mutate } = useMutation({
+  //   mutationFn: updateEvent,
+  //   onMutate: async (data) => {
+  //     const newEvent = data.event;
 
-      await queryClient.cancelQueries({ queryKey: ["events", { id }] }); // to cancel any ongoing queries for this key
+  //     await queryClient.cancelQueries({ queryKey: ["events", { id }] }); // to cancel any ongoing queries for this key
 
-      const previousEvent = queryClient.getQueryData(["events", { id }]); // to be used for rollback in case mutation has failed
+  //     const previousEvent = queryClient.getQueryData(["events", { id }]); // to be used for rollback in case mutation has failed
 
-      queryClient.setQueryData(["events", { id }], newEvent);
+  //     queryClient.setQueryData(["events", { id }], newEvent);
 
-      return { previousEvent };
-    },
-    onError: (error, data, context) => {
-      queryClient.setQueryData(["events", { id }], context.previousEvent);
-    },
-    onSettled: () => {
-      //to make sure all queries in sync with BE, regardless failed or success
-      queryClient.invalidateQueries(["events"]);
-    },
-    // onSuccess: () => {
-    //   queryClient.invalidateQueries({
-    //     queryKey: ["events"],
-    //     refetchType: "none",
-    //   });
-    //   navigate("/events");
-    // },
-  });
+  //     return { previousEvent };
+  //   },
+  //   onError: (error, data, context) => {
+  //     queryClient.setQueryData(["events", { id }], context.previousEvent);
+  //   },
+  //   onSettled: () => {
+  //     //to make sure all queries in sync with BE, regardless failed or success
+  //     queryClient.invalidateQueries(["events"]);
+  //   },
+  //   // onSuccess: () => {
+  //   //   queryClient.invalidateQueries({
+  //   //     queryKey: ["events"],
+  //   //     refetchType: "none",
+  //   //   });
+  //   //   navigate("/events");
+  //   // },
+  // });
 
   function handleSubmit(formData) {
-    mutate({ id, event: formData });
-    navigate("../");
+    // mutate({ id, event: formData });
+    // navigate("../");
+
+    submit(formData, { method: "PUT" });
   }
 
   function handleClose() {
@@ -62,11 +73,6 @@ export default function EditEvent() {
 
   return (
     <Modal onClose={handleClose}>
-      {isPending && (
-        <div className="center">
-          <LoadingIndicator />
-        </div>
-      )}
       {isError && (
         <>
           <ErrorBlock
@@ -88,11 +94,33 @@ export default function EditEvent() {
           <Link to="../" className="button-text">
             Cancel
           </Link>
-          <button type="submit" className="button">
-            Update
+          <button
+            type="submit"
+            className="button"
+            disabled={state === "submitting"}
+          >
+            {state === "submitting" ? "Submitting..." : "Update"}
           </button>
         </EventForm>
       )}
     </Modal>
   );
+}
+
+export function loader({ params }) {
+  return queryClient.fetchQuery({
+    queryKey: ["events", { id: params.id }],
+    queryFn: ({ signal }) => fetchEvent({ id: params.id, signal }),
+  });
+}
+
+export async function action({ request, params }) {
+  const formData = await request.formData();
+  const eventData = Object.fromEntries(formData);
+
+  await updateEvent({ id: params.id, event: eventData });
+
+  await queryClient.invalidateQueries({ queryKey: ["events"] });
+
+  return redirect("../");
 }

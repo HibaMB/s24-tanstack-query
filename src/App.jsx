@@ -10,7 +10,10 @@ import NewEvent from "./components/Events/NewEvent.jsx";
 import EditEvent from "./components/Events/EditEvent.jsx";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./utils/http.js";
-
+import {
+  loader as eventLoader,
+  action as eventUpdateAction,
+} from "./components/Events/EditEvent.jsx";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -34,6 +37,8 @@ const router = createBrowserRouter([
       {
         path: "/events/:id/edit",
         element: <EditEvent />,
+        loader: eventLoader,
+        action: eventUpdateAction,
       },
     ],
   },
