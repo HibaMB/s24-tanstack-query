@@ -56,3 +56,35 @@ export async function fetchSelectableImages() {
   const { images } = await response.json();
   return images;
 }
+
+export async function fetchEvent({ id, signal }) {
+  const response = await fetch(`http://localhost:3000/events/${id}`, {
+    signal,
+  });
+
+  if (!response.ok) {
+    const error = new Error("Failed to fetch event details");
+    error.status = response.status;
+    error.info = await response.json();
+
+    throw error;
+  }
+
+  const { event } = await response.json();
+  return event;
+}
+
+export async function deleteEvent({ id }) {
+  const response = await fetch(`http://localhost:3000/events/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = new Error("Failed to delete event");
+    error.status = response.status;
+    error.info = await response.json();
+
+    throw error;
+  }
+  return await response.json();
+}
